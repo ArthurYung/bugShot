@@ -1,12 +1,12 @@
 use std::process::Command;
-use crate::mouse_event::SimpleEvent;
+use crate::mouse_event::MouseEvent;
+use crate::record::DESKTOP_RESOLUTION;
 
-pub fn process_video_with_overlays(events: &Vec<SimpleEvent>) {
+pub fn process_video_with_overlays(events: &Vec<MouseEvent>, start_time: &i64) {
     if events.is_empty() {
         println!("[process_video_with_overlays] no events to process");
         return;
     }
-    let first_time = events[0].time;
     // 1. 输入输出路径
     let mut input_path = std::env::temp_dir();
     input_path.push("output.mp4");
@@ -24,20 +24,8 @@ pub fn process_video_with_overlays(events: &Vec<SimpleEvent>) {
     arrow_path.push("assets");
     arrow_path.push("arrow.png");
     let arrow_path_str = arrow_path.to_str().unwrap();
-    // 3. 读取桌面分辨率（macOS）
-    #[cfg(target_os = "macos")]
-    let (desktop_width, desktop_height) = {
-        let mut res_path = std::env::temp_dir();
-        res_path.push("desktop_resolution.json");
-        let res_data = std::fs::read_to_string(&res_path).unwrap();
-        let res_json: serde_json::Value = serde_json::from_str(&res_data).unwrap();
-        (
-            res_json["width"].as_f64().unwrap(),
-            res_json["height"].as_f64().unwrap()
-        )
-    };
-    #[cfg(not(target_os = "macos"))]
-    let (desktop_width, desktop_height) = (1920.0, 1080.0); // 其它平台默认值
+    // 3. 读取桌面分辨率（优先全局变量）
+    let (desktop_width, desktop_height) = DESKTOP_RESOLUTION.get().copied().map(|(w, h)| (w as f64, h as f64)).unwrap_or((1920.0, 1080.0));
     // 4. 用 ffprobe 获取 output.mp4 实际分辨率
     let ffprobe_output = Command::new("ffprobe")
         .args(["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", input_path_str])
@@ -70,7 +58,7 @@ pub fn process_video_with_overlays(events: &Vec<SimpleEvent>) {
     let click_events: Vec<_> = events.iter().filter(|e| e.r#type == "click").collect();
     let mut overlay_idx = 0;
     for (i, e) in click_events.iter().enumerate() {
-        let t_start = (e.time - first_time) as f64 / 1000.0;
+        let t_start = (e.time - start_time) as f64 / 1000.0;
         let t_end = t_start + 0.1;
         let x = (e.x as f64 * scale_x).round() as i32 - 16;
         let y = (e.y as f64 * scale_y).round() as i32 - 16;
@@ -88,12 +76,13 @@ pub fn process_video_with_overlays(events: &Vec<SimpleEvent>) {
     // 2. 叠加鼠标指针（每一帧 move 事件）
     let move_events: Vec<_> = events.iter().filter(|e| e.r#type == "move").collect();
     for (j, e) in move_events.iter().enumerate() {
-        let t = (e.time - first_time) as f64 / 1000.0;
+        let t = (e.time - start_time) as f64 / 1000.0;
         let t_next = if j + 1 < move_events.len() {
-            (move_events[j + 1].time - first_time) as f64 / 1000.0
+            (move_events[j + 1].time - start_time) as f64 / 1000.0
         } else {
             t + 1.0
         };
+        println!("move event {}: e.time={}, start_time={}, t={}", j, e.time, start_time, t);
         let x = (e.x as f64 * scale_x).round() as i32 - 10;
         let y = (e.y as f64 * scale_y).round() as i32 - 10;
         overlays.push(format!(

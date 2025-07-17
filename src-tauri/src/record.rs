@@ -10,8 +10,11 @@ use crate::mouse_listener::*;
 use crate::video_overlay::*;
 
 use std::sync::{Arc, Mutex};
+use once_cell::sync::OnceCell;
 
-static mut MOUSE_LISTENER: Option<Arc<Mutex<Option<MouseListener>>>> = None;
+pub static mut MOUSE_LISTENER: Option<Arc<Mutex<Option<MouseListener>>>> = None;
+
+pub static DESKTOP_RESOLUTION: OnceCell<(u32, u32)> = OnceCell::new();
 
 #[command]
 pub fn start_recording() -> Result<(), String> {
@@ -28,43 +31,44 @@ pub fn start_recording() -> Result<(), String> {
         let display = CGDisplay::new(display_id);
         let width = display.pixels_wide() as u32;
         let height = display.pixels_high() as u32;
-        let res = serde_json::json!({
-            "width": width,
-            "height": height
-        });
-        let mut res_path = std::env::temp_dir();
-        res_path.push("desktop_resolution.json");
-        std::fs::write(&res_path, res.to_string()).unwrap();
-        println!("[start_recording] 桌面分辨率: {}x{} 已写入 {:?}", width, height, res_path);
+       
+        DESKTOP_RESOLUTION.set((width, height)).ok();
+        println!("[start_recording] 桌面分辨率: {}x{} 已写入全局变量", width, height);
     }
     Ok(())
 }
 
 #[command]
 pub fn stop_recording() -> Result<(), String> {
-    stop_ffmpeg_process();
-    println!("临时目录: {:?}", std::env::temp_dir());
-    let mut events_path = std::env::temp_dir();
-    events_path.push("events.json");
-    let events_path_str = events_path.to_str().unwrap();
-    let events = unsafe {
-        if let Some(listener_arc) = &MOUSE_LISTENER {
-            let mut listener_opt = listener_arc.lock().unwrap();
-            if let Some(listener) = listener_opt.as_mut() {
-                listener.stop();
-                let mouse_events = listener.get_events();
-                *listener_opt = None;
-                mouse_events_to_simple(&mouse_events)
+    tauri::async_runtime::spawn(async move {
+        stop_ffmpeg_process();
+        println!("临时目录: {:?}", std::env::temp_dir());
+        let mut events_path = std::env::temp_dir();
+    
+        events_path.push("events.json");
+        let events_path_str = events_path.to_str().unwrap().to_string();
+        let (events, start_time) = unsafe {
+            if let Some(listener_arc) = &MOUSE_LISTENER {
+                let mut listener_opt = listener_arc.lock().unwrap();
+                if let Some(listener) = listener_opt.as_mut() {
+                    listener.stop();
+                    let mouse_events = listener.get_events();
+                    let start_time = listener.get_start_time();
+                    *listener_opt = None;
+                    (mouse_events, start_time)
+                } else {
+                    (vec![], 0)
+                }
             } else {
-                vec![]
+                (vec![], 0)
             }
-        } else {
-            vec![]
+        };
+    
+        let _ = save_events_to_file(&events, &events_path_str);
+        if !events.is_empty() {
+            process_video_with_overlays(&events, &start_time);
         }
-    };
-    save_events_to_file(&events, events_path_str)?;
-    if !events.is_empty() {
-        process_video_with_overlays(&events);
-    }
+    });
+ 
     Ok(())
 } 

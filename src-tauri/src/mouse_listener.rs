@@ -12,6 +12,7 @@ use crate::mouse_event::MouseEvent;
 /// 鼠标监听器，包含事件 Vec、停止信号和监听线程句柄
 pub struct MouseListener {
     pub events: Arc<Mutex<Vec<MouseEvent>>>,
+    pub start_time: i64,
     stop_flag: Arc<AtomicBool>,
     handle: Option<thread::JoinHandle<()>>,
 }
@@ -20,6 +21,7 @@ impl MouseListener {
     /// 创建并启动监听线程
     pub fn start() -> Self {
         let events = Arc::new(Mutex::new(Vec::new()));
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
         let stop_flag = Arc::new(AtomicBool::new(false));
         let events_clone = events.clone();
         let stop_flag_clone = stop_flag.clone();
@@ -74,9 +76,14 @@ impl MouseListener {
         });
         Self {
             events,
+            start_time,
             stop_flag,
             handle: Some(handle),
         }
+    }
+
+    pub fn set_start_time(&mut self, start_time: i64) {
+        self.start_time = start_time;
     }
 
     /// 停止监听线程
@@ -89,5 +96,10 @@ impl MouseListener {
     /// 获取所有事件的只读副本
     pub fn get_events(&self) -> Vec<MouseEvent> {
         self.events.lock().unwrap().clone()
+    }
+
+    /// 获取开始时间
+    pub fn get_start_time(&self) -> i64 {
+        self.start_time.clone()
     }
 } 

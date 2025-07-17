@@ -344,6 +344,7 @@ name = "bugshot"
 version = "0.1.0"
 dependencies = [
  "core-graphics 0.22.3",
+ "once_cell",
  "rdev",
  "serde",
  "serde_json",
