@@ -6,6 +6,7 @@ pub mod mouse_event;
 pub mod mouse_listener;
 pub mod video_overlay;
 pub mod record;
+pub mod get_element;
 mod utils;  // 工具相关功能模块
 
 
