@@ -1,0 +1,43 @@
+.recording-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background: rgba(30, 30, 30, 0.92);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 16px;
+  min-width: 220px;
+}
+.breath-light {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ff3b3b;
+  margin-right: 10px;
+  animation: breath 1.2s infinite;
+}
+@keyframes breath {
+  0% { box-shadow: 0 0 0 0 #ff3b3b88; opacity: 1; }
+  50% { box-shadow: 0 0 0 8px #ff3b3b22; opacity: 0.7; }
+  100% { box-shadow: 0 0 0 0 #ff3b3b88; opacity: 1; }
+}
+.stop-btn {
+  background: #ff3b3b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 15px;
+  margin-left: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.stop-btn:hover {
+  background: #c62828;
+}
