@@ -1,84 +1,79 @@
-import { useState, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import './App.css'
+import WhistleManager from './WhistleManager'
+import ConfigManager from './ConfigManager'
 
 function App() {
-  const [recording, setRecording] = useState(false);
-  const [events, setEvents] = useState([]);
-  const eventsRef = useRef([]);
-
-  // 记录事件
-  const recordEvent = (type, e) => {
-    const event = {
-      type,
-      x: e.clientX,
-      y: e.clientY,
-      time: Date.now(),
-      target: e.target.tagName,
-    };
-    eventsRef.current.push(event);
-    setEvents([...eventsRef.current]);
-  };
-
-  // 监听事件
-  const startCapture = () => {
-    setRecording(true);
-    eventsRef.current = [];
-    setEvents([]);
-    window.addEventListener("click", clickHandler, true);
-    window.addEventListener("mousemove", hoverHandler, true);
-    invoke("start_recording", {});
-  };
-
-  const stopCapture = async () => {
-    setRecording(false);
-    window.removeEventListener("click", clickHandler, true);
-    window.removeEventListener("mousemove", hoverHandler, true);
-    await invoke("stop_recording", { events: eventsRef.current });
-  };
-
-  const clickHandler = (e) => recordEvent("click", e);
-  let lastHover = 0;
-  const hoverHandler = (e) => {
-    // 只每100ms记录一次hover，减少数据量
-    if (Date.now() - lastHover > 100) {
-      recordEvent("hover", e);
-      lastHover = Date.now();
-    }
-  };
-
-  useEffect(() => {
-    // 启动时检测 ffmpeg
-    invoke("check_ffmpeg_installed").then((ok) => {
-      if (!ok) {
-        alert("未检测到 ffmpeg，请先安装后再使用本软件！");
-        // 你也可以弹窗引导用户安装
-      }
-    });
-  }, []);
+  const [greetMsg, setGreetMsg] = useState("")
+  const [name, setName] = useState("")
+  const [currentTab, setCurrentTab] = useState('whistle') // 'whistle', 'recording', 'config'
 
   return (
-    <main className="container">
-      <h1>BugShot 桌面录屏</h1>
-      <div style={{ margin: "20px 0" }}>
-        {recording ? (
-          <button onClick={stopCapture}>停止录制</button>
+    <div className="container">
+      <h1>BugShot - 录屏抓包工具</h1>
+      
+      {/* 导航标签 */}
+      <div className="tabs" style={{ marginBottom: '20px' }}>
+        <button 
+          onClick={() => setCurrentTab('whistle')}
+          style={{ 
+            padding: '10px 20px', 
+            marginRight: '10px',
+            backgroundColor: currentTab === 'whistle' ? '#007bff' : '#f8f9fa',
+            color: currentTab === 'whistle' ? 'white' : 'black',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Whistle 代理
+        </button>
+        <button 
+          onClick={() => setCurrentTab('recording')}
+          style={{ 
+            padding: '10px 20px',
+            marginRight: '10px',
+            backgroundColor: currentTab === 'recording' ? '#007bff' : '#f8f9fa',
+            color: currentTab === 'recording' ? 'white' : 'black',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          录屏功能
+        </button>
+        <button 
+          onClick={() => setCurrentTab('config')}
+          style={{ 
+            padding: '10px 20px',
+            backgroundColor: currentTab === 'config' ? '#007bff' : '#f8f9fa',
+            color: currentTab === 'config' ? 'white' : 'black',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          应用配置
+        </button>
+      </div>
+
+      {/* 内容区域 */}
+      <div className="content">
+        {currentTab === 'whistle' ? (
+          <WhistleManager />
+        ) : currentTab === 'recording' ? (
+          <div className="recording-section">
+            <h2>录屏功能</h2>
+            <p>录屏功能开发中...</p>
+            {/* 这里可以添加录屏相关的组件 */}
+          </div>
         ) : (
-          <button onClick={startCapture}>开始录制</button>
+          <ConfigManager />
         )}
       </div>
-      <div>
-        <h3>已记录事件数：{events.length}</h3>
-        <ul style={{ maxHeight: 200, overflow: "auto", fontSize: 12 }}>
-          {events.slice(-10).map((ev, i) => (
-            <li key={i}>
-              [{ev.type}] {ev.x},{ev.y} {ev.target} {ev.time}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </main>
-  );
+    </div>
+  )
 }
 
-export default App;
+export default App

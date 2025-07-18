@@ -1,33 +1,51 @@
-// 主模块文件 lib.rs
-// 负责声明和导入各个功能模块，并注册 Tauri 命令
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod recorder;
+// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+
 pub mod mouse_event;
 pub mod mouse_listener;
-pub mod video_overlay;
+pub mod recorder;
 pub mod record;
+pub mod video_overlay;
+pub mod utils;
 pub mod get_element;
-mod utils;  // 工具相关功能模块
+pub mod whistle;
+pub mod whistle_commands;
+pub mod config;
+pub mod config_commands;
+pub mod window;
 
+pub fn main() {
+    // 初始化配置
+    let config = config::init_config();
 
-// 导入各模块中的命令和结构体，供 Tauri 注册和调用
-use record::{start_recording, stop_recording};
-use utils::{greet, check_ffmpeg_installed};
-
-
-// Tauri 应用程序入口函数
-// 负责初始化插件、注册命令并启动应用
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    std::panic::set_hook(Box::new(|info| {
-        println!("[panic] {:?}", info);
-    }));
+    if config.capture_enabled {
+        let _ = whistle_commands::whistle_start();
+    }
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init()) // 初始化文件打开插件
+        .setup(|app| {
+            window::create_system_tray(&app);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
-            greet, start_recording, stop_recording, check_ffmpeg_installed // 注册所有命令
+            utils::greet,
+            record::start_recording,
+            record::stop_recording,
+            whistle_commands::whistle_check_environment,
+            whistle_commands::whistle_install,
+            whistle_commands::whistle_start,
+            whistle_commands::whistle_stop,
+            whistle_commands::whistle_get_status,
+            whistle_commands::whistle_open_web_ui,
+            config_commands::config_get,
+            config_commands::config_update,
+            config_commands::config_reset,
+            config_commands::config_get_path,
+            config_commands::config_init,
+            utils::check_ffmpeg_installed,
         ])
-        .run(tauri::generate_context!()) // 启动 Tauri 应用
+        .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

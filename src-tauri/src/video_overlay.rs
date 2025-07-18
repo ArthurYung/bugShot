@@ -57,7 +57,7 @@ pub fn process_video_with_overlays(events: &Vec<MouseEvent>, start_time: &i64) {
     // 1. 叠加点击圆圈特效（只处理 click 事件）
     let click_events: Vec<_> = events.iter().filter(|e| e.r#type == "click").collect();
     let mut overlay_idx = 0;
-    for (i, e) in click_events.iter().enumerate() {
+    for (_, e) in click_events.iter().enumerate() {
         let t_start = (e.time - start_time) as f64 / 1000.0;
         let t_end = t_start + 0.1;
         let x = (e.x as f64 * scale_x).round() as i32 - 16;

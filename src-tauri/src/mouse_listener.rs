@@ -3,9 +3,7 @@
 
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde::{Serialize, Deserialize};
 use rdev::{listen, Event as RdevEvent, EventType as RdevEventType, Button};
 use crate::mouse_event::MouseEvent;
 // use crate::get_element::get_element_info_at;
@@ -15,7 +13,6 @@ pub struct MouseListener {
     pub events: Arc<Mutex<Vec<MouseEvent>>>,
     pub start_time: Arc<Mutex<i64>>,
     stop_flag: Arc<AtomicBool>,
-    handle: Option<thread::JoinHandle<()>>,
 }
 
 impl MouseListener {
@@ -86,14 +83,10 @@ impl MouseListener {
             println!("[mouse_listener] error: {:?}", e);
         }
         println!("[mouse_listener] thread exiting");
-        let handle = thread::spawn(move || {
-            // 线程体
-        });
         Self {
             events,
             start_time,
             stop_flag,
-            handle: Some(handle),
         }
     }
 

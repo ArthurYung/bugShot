@@ -2,7 +2,6 @@
 // 提供录屏的开始、停止命令，以及事件数据结构
 
 use tauri::command;
-use std::path::PathBuf;
 
 use crate::recorder::*;
 use crate::mouse_event::*;
